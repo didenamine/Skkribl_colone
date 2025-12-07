@@ -4,11 +4,9 @@ import random
 import time
 import sys
 import os
-
-# Add parent directory to path to import config
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # Add the project's root directory to the Python path to enable importing modules like 'config' from a higher level.
 import config
 import protocol
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) 
 
 class ServerCore:
     def __init__(self, log_callback=None, update_count_callback=None):
@@ -27,11 +25,11 @@ class ServerCore:
         
         self.round_active = False
         
-        # Track who guessed correctly in the current round
+        # tracker for  who guessed correctly in the current round .. set is used to avoid duplicates
         self.correct_guesses = set()
         self.round_id = 0
         
-        # Game Limits
+        # game Limits (the rounds)
         self.max_rounds = config.DEFAULT_ROUNDS
         self.current_round = 1
         self.turns_in_round = 0
@@ -113,7 +111,7 @@ class ServerCore:
             if client in self.scores:
                 del self.scores[client]
             
-            # If a client disconnects, we might need to check if round should end
+            # If a client disconnects we might need to check if round should end
             if client in self.correct_guesses:
                 self.correct_guesses.remove(client)
                 
@@ -139,7 +137,7 @@ class ServerCore:
         threading.Thread(target=self._transition_to_next_round, daemon=True).start()
 
     def _transition_to_next_round(self):
-        #4 seconds delay before starting new round
+        # 4 seconds delay before starting new round
         time.sleep(4)
         self.start_new_round()
 
@@ -179,7 +177,7 @@ class ServerCore:
         self.correct_guesses.clear()
         self.round_id += 1 # Increment round ID to invalidate old timers
         
-        time.sleep(0.1) # Buffer
+        time.sleep(0.1) 
 
         self.drawer_index = (self.drawer_index + 1) % len(self.clients)
         self.drawer_socket = self.clients[self.drawer_index]
@@ -195,7 +193,6 @@ class ServerCore:
         # Initial Hint
         self.hint_string = "*" * len(self.current_word)
         self.broadcast(protocol.make_msg("HINT", self.hint_string), exclude_socket=self.drawer_socket)
-        
         try:
             self.drawer_socket.send(protocol.make_msg("SECRET", self.current_word).encode('utf-8'))
         except:
@@ -208,7 +205,6 @@ class ServerCore:
         for i in range(config.ROUND_TIME, -1, -1):
             if not self.running or not self.round_active or self.round_id != round_id:
                 return
-            
             # Hint Logic: Reveal a letter every 5 seconds ////"""""" FOR NOW ""
             elapsed = config.ROUND_TIME - i
             if elapsed > 0 and elapsed % 5 == 0:
@@ -275,12 +271,11 @@ class ServerCore:
                                 points = max(300 -(rank *50),50)
                                 
                                 self.scores[client] += points
-                                self.scores[self.drawer_socket] += 50 # Bonus for drawer
+                                self.scores[self.drawer_socket] += 50 # Bonus for drawer if someone guessed the word
                                 
                                 self.correct_guesses.add(client)
                                 self.broadcast(protocol.make_msg("CHAT", f"Server: {name} GUESSED THE WORD! (+{points} pts)"))
                                 self.log(f"{name} guessed the word!")
-                                
                                 # Check if everyone guessd ofc except the current drawer
                                 num_guessers = len(self.clients) - 1
                                 if num_guessers > 0 and len(self.correct_guesses) >= num_guessers:
